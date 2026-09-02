@@ -1,0 +1,9 @@
+{
+  "name": "ambiguous-ordering",
+  "events": [
+    {"sequence": 1, "state_identity": "state-0", "evaluator_identity": "eval-1", "toolchain_identity": "go1.27.x", "change_receipt": {"identity": "receipt-order-0", "operation": "observe", "parent_state_identity": "state-0", "result_state_identity": "state-0", "authorized": true}},
+    {"sequence": 1, "state_identity": "state-1", "evaluator_identity": "eval-1", "toolchain_identity": "go1.27.x", "change_receipt": {"identity": "receipt-order-1", "operation": "advance", "parent_state_identity": "state-0", "result_state_identity": "state-1", "authorized": true}}
+  ],
+  "decision_defaults": {"decision": "CLOSED", "semantic_effect": "ADVANCE", "evidence_mode": "valid"},
+  "expected": {"decision_vector": ["UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN"], "detection_kinds_expected": true, "detection_kinds": ["AMBIGUOUS_ORDERING"], "periods_expected": true, "periods": [], "frontier_sequences_expected": true, "frontier_sequences": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], "operational_refuted_count": 0}
+}

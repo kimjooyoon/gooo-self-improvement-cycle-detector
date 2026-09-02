@@ -1,0 +1,10 @@
+{
+  "name": "explicit-fixed-point",
+  "events": [
+    {"sequence": 1, "state_identity": "state-fixed", "state_digest": "digest-fixed", "evaluator_identity": "eval-1", "toolchain_identity": "go1.27.x", "change_receipt": {"identity": "receipt-fixed", "operation": "observe", "parent_state_identity": "state-fixed", "result_state_identity": "state-fixed", "authorized": true}},
+    {"sequence": 2, "state_identity": "state-fixed", "state_digest": "digest-fixed", "evaluator_identity": "eval-1", "toolchain_identity": "go1.27.x", "change_receipt": {"identity": "receipt-fixed", "operation": "observe", "parent_state_identity": "state-fixed", "result_state_identity": "state-fixed", "authorized": true}}
+  ],
+  "decision_defaults": {"decision": "CLOSED", "semantic_effect": "NO_CHANGE", "evidence_mode": "valid"},
+  "fixed_point": {"authorized": true, "state_identity": "state-fixed", "evidence_mode": "match"},
+  "expected": {"decision_vector": ["CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED"], "detection_kinds_expected": true, "detection_kinds": ["EXPLICIT_FIXED_POINT"], "periods_expected": true, "periods": [1], "frontier_sequences_expected": true, "frontier_sequences": [], "operational_refuted_count": 0}
+}

@@ -1,0 +1,9 @@
+{
+  "name": "missing-state",
+  "events": [
+    {"sequence": 1, "state_identity": "state-0", "evaluator_identity": "eval-1", "toolchain_identity": "go1.27.x", "change_receipt": {"identity": "receipt-missing-0", "operation": "observe", "parent_state_identity": "state-0", "result_state_identity": "state-0", "authorized": true}},
+    {"sequence": 2, "state_identity": "", "evaluator_identity": "eval-1", "toolchain_identity": "go1.27.x", "change_receipt": {"identity": "receipt-missing-1", "operation": "advance", "parent_state_identity": "state-0", "result_state_identity": "", "authorized": true}}
+  ],
+  "decision_defaults": {"decision": "CLOSED", "semantic_effect": "ADVANCE", "evidence_mode": "valid"},
+  "expected": {"decision_vector": ["UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN"], "detection_kinds_expected": true, "detection_kinds": ["MISSING_STATE"], "periods_expected": true, "periods": [], "frontier_sequences_expected": true, "frontier_sequences": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], "operational_refuted_count": 0}
+}

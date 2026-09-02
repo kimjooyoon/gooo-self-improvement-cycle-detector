@@ -1,0 +1,159 @@
+name: gooo-detector-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Immutable annotated release tag
+        required: true
+        default: v0.1.0
+
+permissions:
+  contents: write
+
+env:
+  GO_VERSION: '1.27.x'
+
+jobs:
+  validate-main:
+    name: validate-main
+    runs-on: ubuntu-latest
+    outputs:
+      validation_artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      validation_artifact_name: gooo-release-validation-${{ github.run_id }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+      - name: Set up Go 1.27.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Generate from .gooo authority
+        run: go generate ./...
+      - name: Format in Actions
+        run: find . -type f -name '*.go' -not -path './.git/*' -print0 | xargs -0 gofmt -w
+      - name: Apply go fix in Actions
+        run: go fix ./...
+      - name: Verify Go toolchain
+        run: |
+          case "$(go env GOVERSION)" in
+            go1.27.*) ;;
+            *) echo "unexpected Go version: $(go env GOVERSION)"; exit 1 ;;
+          esac
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+      - name: Build detector
+        run: go build -trimpath -o "$RUNNER_TEMP/gooo-detector" ./cmd/gooo-detector
+      - name: Run deterministic conformance
+        run: go run ./cmd/gooo-conformance --fixtures fixtures --repo-root "$GITHUB_WORKSPACE" --out "$RUNNER_TEMP/gooo-release-validation"
+      - name: Replay deterministically
+        run: go run ./cmd/gooo-replay --fixtures fixtures --out "$RUNNER_TEMP/gooo-release-validation"
+      - name: Observe runtime and RSS
+        run: |
+          /usr/bin/time -v "$RUNNER_TEMP/gooo-detector" --trace fixtures/01-bounded-advance.json --out "$RUNNER_TEMP/gooo-release-validation/runtime" 2> "$RUNNER_TEMP/release-time.txt"
+          rss_kb="$(awk -F: '/Maximum resident set size/ {gsub(/^[[:space:]]+/, "", $2); print $2}' "$RUNNER_TEMP/release-time.txt")"
+          test -n "$rss_kb"
+          printf '{"max_rss_kb":%s,"repository_writes":0}\n' "$rss_kb" > "$RUNNER_TEMP/gooo-release-validation/runtime-rss.json"
+      - name: Upload release validation artifact
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: gooo-release-validation-${{ github.run_id }}
+          path: ${{ runner.temp }}/gooo-release-validation
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: draft-first-immutable-release
+    runs-on: ubuntu-latest
+    needs: validate-main
+    steps:
+      - name: Check out the validated main commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download validation artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.validate-main.outputs.validation_artifact_name }}
+          path: ${{ runner.temp }}/gooo-release-validation
+      - name: Verify immutable releases policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$(gh api "repos/$GITHUB_REPOSITORY/immutable-releases" --jq '.enabled')" = true
+      - name: Create annotated tag without replacement
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "tag already exists; refusing to rewrite or recreate it"
+            exit 1
+          fi
+          git tag -a "$TAG" "$GITHUB_SHA" -m "Release $TAG"
+          git push origin "$TAG"
+      - name: Package validated reports
+        env:
+          TAG: ${{ inputs.tag }}
+        run: tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/gooo-release-report-$TAG.tar.gz" gooo-release-validation
+      - name: Create draft release exactly once
+        id: create_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh api --method POST "repos/$GITHUB_REPOSITORY/releases" \
+            --field tag_name="$TAG" \
+            --field target_commitish="$GITHUB_SHA" \
+            --field name="$TAG" \
+            --field body="Gooo detector release validated by GitHub Actions run $GITHUB_RUN_ID." \
+            --field draft=true \
+            --field prerelease=false > "$RUNNER_TEMP/draft-release.json"
+          release_id="$(jq -r '.id' "$RUNNER_TEMP/draft-release.json")"
+          test "$release_id" != null
+          echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
+      - name: Upload report asset to draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release upload "$TAG" "$RUNNER_TEMP/gooo-release-report-$TAG.tar.gz#gooo-release-validation" --repo "$GITHUB_REPOSITORY"
+      - name: Publish draft and require immutability
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ steps.create_release.outputs.release_id }}
+        run: |
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" --field draft=false > "$RUNNER_TEMP/published-release.json"
+          jq -e '.draft == false and .immutable == true' "$RUNNER_TEMP/published-release.json"
+      - name: Record release, tag, asset, and digest identifiers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ steps.create_release.outputs.release_id }}
+          TAG: ${{ inputs.tag }}
+          VALIDATION_ARTIFACT_ID: ${{ needs.validate-main.outputs.validation_artifact_id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" > "$RUNNER_TEMP/tag-ref.json"
+          tag_object_sha="$(jq -r '.object.sha' "$RUNNER_TEMP/tag-ref.json")"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" > "$RUNNER_TEMP/release-assets.json"
+          jq \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg commit_sha "$GITHUB_SHA" \
+            --arg run_id "$GITHUB_RUN_ID" \
+            --arg job "release" \
+            --arg validation_job "validate-main" \
+            --arg validation_artifact_id "$VALIDATION_ARTIFACT_ID" \
+            --arg tag "$TAG" \
+            --arg tag_object_sha "$tag_object_sha" \
+            --argjson release_id "$RELEASE_ID" \
+            '{repository:$repository, commit_sha:$commit_sha, run_id:$run_id, job:$job, validation_job:$validation_job, validation_artifact_id:$validation_artifact_id, tag:{name:$tag, annotated_object_sha:$tag_object_sha}, release:{id:$release_id, immutable:true, assets:[.[] | {id,name,size,digest,browser_download_url}]}}' \
+            "$RUNNER_TEMP/release-assets.json" > "$RUNNER_TEMP/release-manifest.json"
+          cat "$RUNNER_TEMP/release-manifest.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload immutable release manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: gooo-release-manifest-${{ github.run_id }}
+          path: ${{ runner.temp }}/release-manifest.json
+          if-no-files-found: error
+          retention-days: 90

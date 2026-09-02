@@ -1,0 +1,10 @@
+{
+  "name": "hash-identical-missing-evidence",
+  "events": [
+    {"sequence": 1, "state_identity": "state-hash-identical", "state_digest": "digest-same", "evaluator_identity": "eval-1", "toolchain_identity": "go1.27.x", "change_receipt": {"identity": "receipt-missing-evidence", "operation": "observe", "parent_state_identity": "state-hash-identical", "result_state_identity": "state-hash-identical", "authorized": true}},
+    {"sequence": 2, "state_identity": "state-hash-identical", "state_digest": "digest-same", "evaluator_identity": "eval-1", "toolchain_identity": "go1.27.x", "change_receipt": {"identity": "receipt-missing-evidence", "operation": "observe", "parent_state_identity": "state-hash-identical", "result_state_identity": "state-hash-identical", "authorized": true}}
+  ],
+  "decision_defaults": {"decision": "CLOSED", "semantic_effect": "NO_CHANGE", "evidence_mode": "missing"},
+  "fixed_point": {"authorized": true, "state_identity": "state-hash-identical", "evidence_mode": "match"},
+  "expected": {"decision_vector": ["UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN"], "detection_kinds_expected": true, "detection_kinds": ["MISSING_EVIDENCE", "REPEATED_NOOP"], "periods_expected": true, "periods": [1], "frontier_sequences_expected": true, "frontier_sequences": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], "operational_refuted_count": 0}
+}

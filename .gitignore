@@ -1,0 +1,3 @@
+internal/generated/*.go
+!internal/generated/doc.go
+.DS_Store

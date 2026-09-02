@@ -1,0 +1,124 @@
+name: gooo-detector-ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: '1.27.x'
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Go 1.27.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Generate from .gooo authority
+        run: go generate ./...
+      - name: Format in Actions
+        run: find . -type f -name '*.go' -not -path './.git/*' -print0 | xargs -0 gofmt -w
+      - name: Apply go fix in Actions
+        run: go fix ./...
+      - name: Verify Go toolchain
+        run: |
+          case "$(go env GOVERSION)" in
+            go1.27.*) ;;
+            *) echo "unexpected Go version: $(go env GOVERSION)"; exit 1 ;;
+          esac
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+      - name: Build detector
+        run: go build -trimpath -o "$RUNNER_TEMP/gooo-detector" ./cmd/gooo-detector
+
+  conformance:
+    name: conformance-and-report
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Go 1.27.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Generate from .gooo authority
+        run: go generate ./...
+      - name: Format in Actions
+        run: find . -type f -name '*.go' -not -path './.git/*' -print0 | xargs -0 gofmt -w
+      - name: Apply go fix in Actions
+        run: go fix ./...
+      - name: Run deterministic conformance
+        run: go run ./cmd/gooo-conformance --fixtures fixtures --repo-root "$GITHUB_WORKSPACE" --out "$RUNNER_TEMP/gooo-conformance"
+      - name: Replay deterministically
+        run: go run ./cmd/gooo-replay --fixtures fixtures --out "$RUNNER_TEMP/gooo-conformance"
+      - name: Publish report summary
+        run: |
+          echo '### Gooo detector conformance' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/gooo-conformance/conformance-report.json" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload conformance artifact
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: gooo-conformance-${{ github.run_id }}
+          path: ${{ runner.temp }}/gooo-conformance
+          if-no-files-found: error
+          retention-days: 14
+
+  runtime:
+    name: runtime-and-rss
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Go 1.27.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Generate from .gooo authority
+        run: go generate ./...
+      - name: Format in Actions
+        run: find . -type f -name '*.go' -not -path './.git/*' -print0 | xargs -0 gofmt -w
+      - name: Apply go fix in Actions
+        run: go fix ./...
+      - name: Build detector
+        run: go build -trimpath -o "$RUNNER_TEMP/gooo-detector" ./cmd/gooo-detector
+      - name: Snapshot repository before runtime
+        run: |
+          (cd "$GITHUB_WORKSPACE" && find . -path './.git' -prune -o -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/repo-before.sha256"
+      - name: Observe runtime and RSS
+        run: |
+          mkdir -p "$RUNNER_TEMP/gooo-runtime"
+          /usr/bin/time -v "$RUNNER_TEMP/gooo-detector" --trace fixtures/01-bounded-advance.json --out "$RUNNER_TEMP/gooo-runtime" 2> "$RUNNER_TEMP/time.txt"
+          rss_kb="$(awk -F: '/Maximum resident set size/ {gsub(/^[[:space:]]+/, "", $2); print $2}' "$RUNNER_TEMP/time.txt")"
+          test -n "$rss_kb"
+          printf '{"max_rss_kb":%s,"repository_writes":0}\n' "$rss_kb" > "$RUNNER_TEMP/gooo-runtime/runtime-rss.json"
+      - name: Verify runtime repository writes are zero
+        run: |
+          (cd "$GITHUB_WORKSPACE" && find . -path './.git' -prune -o -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/repo-after.sha256"
+          diff -u "$RUNNER_TEMP/repo-before.sha256" "$RUNNER_TEMP/repo-after.sha256"
+          test -z "$(git -C "$GITHUB_WORKSPACE" status --porcelain)"
+      - name: Upload runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gooo-runtime-${{ github.run_id }}
+          path: ${{ runner.temp }}/gooo-runtime
+          if-no-files-found: error
+          retention-days: 14

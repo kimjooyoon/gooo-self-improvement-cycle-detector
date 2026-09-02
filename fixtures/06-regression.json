@@ -1,0 +1,11 @@
+{
+  "name": "regression",
+  "events": [
+    {"sequence": 1, "state_identity": "state-0", "evaluator_identity": "eval-1", "toolchain_identity": "go1.27.x", "change_receipt": {"identity": "receipt-reg-0", "operation": "observe", "parent_state_identity": "state-0", "result_state_identity": "state-0", "authorized": true}},
+    {"sequence": 2, "state_identity": "state-1", "evaluator_identity": "eval-1", "toolchain_identity": "go1.27.x", "change_receipt": {"identity": "receipt-reg-1", "operation": "advance", "parent_state_identity": "state-0", "result_state_identity": "state-1", "authorized": true}}
+  ],
+  "decision_defaults": {"decision": "CLOSED", "semantic_effect": "ADVANCE", "evidence_mode": "valid"},
+  "decision_overrides": [{"sequence": 2, "cell_id": "CELL09", "semantic_effect": "REGRESSION"}],
+  "claim_mode": "exact_first_change",
+  "expected": {"decision_vector": ["CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED", "CLOSED", "REFUTED", "CLOSED", "CLOSED", "CLOSED"], "detection_kinds_expected": true, "detection_kinds": ["PER_CELL_REGRESSION"], "periods_expected": true, "periods": [], "frontier_sequences_expected": true, "frontier_sequences": [2], "operational_refuted_count": 1}
+}
