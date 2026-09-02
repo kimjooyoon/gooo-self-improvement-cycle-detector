@@ -21,7 +21,7 @@ func main() {
 	outDir := flag.String("out", "", "caller-owned output directory")
 	flag.Parse()
 	if *tracePath == "" || *outDir == "" {
-		fatal("--trace and --out are required")
+		fatal("--trace and --out are required", nil)
 	}
 	data, err := os.ReadFile(*tracePath)
 	if err != nil {
