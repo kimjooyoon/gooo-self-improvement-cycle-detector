@@ -1,0 +1,74 @@
+{
+  "schema": "gooo.trace.semantic-progress",
+  "version": 1,
+  "decision_precedence": ["REFUTED", "UNKNOWN", "CLOSED"],
+  "proof_choices": {
+    "FOUNDATION": 4,
+    "COHERENCE": 4,
+    "REGRESSION": 4
+  },
+  "indicators": {
+    "DRIVER": 4,
+    "OUTCOME": 4,
+    "GUARDRAIL": 4
+  },
+  "activities": [
+    {"id": "STATE_IDENTITY", "proof_choice": "FOUNDATION", "indicator": "DRIVER"},
+    {"id": "CELL_EVIDENCE", "proof_choice": "FOUNDATION", "indicator": "OUTCOME"},
+    {"id": "EVALUATOR_PAIR", "proof_choice": "FOUNDATION", "indicator": "GUARDRAIL"},
+    {"id": "TOOLCHAIN_PAIR", "proof_choice": "FOUNDATION", "indicator": "DRIVER"},
+    {"id": "CHANGE_RECEIPT", "proof_choice": "COHERENCE", "indicator": "OUTCOME"},
+    {"id": "ORDERING", "proof_choice": "COHERENCE", "indicator": "GUARDRAIL"},
+    {"id": "FIXED_POINT_AUTHORIZATION", "proof_choice": "COHERENCE", "indicator": "DRIVER"},
+    {"id": "CYCLE_PATH", "proof_choice": "COHERENCE", "indicator": "OUTCOME"},
+    {"id": "REGRESSION_WITNESS", "proof_choice": "REGRESSION", "indicator": "GUARDRAIL"},
+    {"id": "CAUSAL_FRONTIER", "proof_choice": "REGRESSION", "indicator": "DRIVER"},
+    {"id": "COUNTEREXAMPLE", "proof_choice": "REGRESSION", "indicator": "OUTCOME"},
+    {"id": "NEXT_OPERATION", "proof_choice": "REGRESSION", "indicator": "GUARDRAIL"}
+  ],
+  "cells": [
+    {"id": "CELL01", "proof_choice": "FOUNDATION", "indicator": "DRIVER", "activity": "STATE_IDENTITY"},
+    {"id": "CELL02", "proof_choice": "FOUNDATION", "indicator": "OUTCOME", "activity": "CELL_EVIDENCE"},
+    {"id": "CELL03", "proof_choice": "FOUNDATION", "indicator": "GUARDRAIL", "activity": "EVALUATOR_PAIR"},
+    {"id": "CELL04", "proof_choice": "FOUNDATION", "indicator": "DRIVER", "activity": "TOOLCHAIN_PAIR"},
+    {"id": "CELL05", "proof_choice": "COHERENCE", "indicator": "OUTCOME", "activity": "CHANGE_RECEIPT"},
+    {"id": "CELL06", "proof_choice": "COHERENCE", "indicator": "GUARDRAIL", "activity": "ORDERING"},
+    {"id": "CELL07", "proof_choice": "COHERENCE", "indicator": "DRIVER", "activity": "FIXED_POINT_AUTHORIZATION"},
+    {"id": "CELL08", "proof_choice": "COHERENCE", "indicator": "OUTCOME", "activity": "CYCLE_PATH"},
+    {"id": "CELL09", "proof_choice": "REGRESSION", "indicator": "GUARDRAIL", "activity": "REGRESSION_WITNESS"},
+    {"id": "CELL10", "proof_choice": "REGRESSION", "indicator": "DRIVER", "activity": "CAUSAL_FRONTIER"},
+    {"id": "CELL11", "proof_choice": "REGRESSION", "indicator": "OUTCOME", "activity": "COUNTEREXAMPLE"},
+    {"id": "CELL12", "proof_choice": "REGRESSION", "indicator": "GUARDRAIL", "activity": "NEXT_OPERATION"}
+  ],
+  "required_evidence": [
+    "state_identity",
+    "cell_decision_identity",
+    "evaluator_identity",
+    "toolchain_identity",
+    "change_receipt_identity"
+  ],
+  "stages": ["INGEST", "PAIR", "CLASSIFY", "FRONTIER", "OPERATE"],
+  "unknown_classes": [
+    "missing_state",
+    "missing_evidence",
+    "stale_evidence",
+    "ambiguous_ordering",
+    "evaluator_drift",
+    "toolchain_drift",
+    "repeated_noop",
+    "oscillation",
+    "cycle",
+    "insufficient_observation",
+    "fixed_point_evidence_mismatch",
+    "incomplete_trace"
+  ],
+  "rules": {
+    "no_global_score": true,
+    "hash_change_is_not_progress": true,
+    "commit_count_is_not_progress": true,
+    "line_count_is_not_progress": true,
+    "improvement_requires_exact_paired_evidence": true,
+    "fixed_point_requires_authorization_and_matching_evidence": true,
+    "runtime_repository_writes": 0
+  }
+}
