@@ -89,6 +89,8 @@ jobs:
             echo "tag already exists; refusing to rewrite or recreate it"
             exit 1
           fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$TAG" "$GITHUB_SHA" -m "Release $TAG"
           git push origin "$TAG"
       - name: Package validated reports
