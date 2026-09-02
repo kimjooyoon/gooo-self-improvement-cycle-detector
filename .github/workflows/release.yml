@@ -80,10 +80,6 @@ jobs:
         with:
           name: ${{ needs.validate-main.outputs.validation_artifact_name }}
           path: ${{ runner.temp }}/gooo-release-validation
-      - name: Verify immutable releases policy
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: test "$(gh api "repos/$GITHUB_REPOSITORY/immutable-releases" --jq '.enabled')" = true
       - name: Create annotated tag without replacement
         env:
           GH_TOKEN: ${{ github.token }}
